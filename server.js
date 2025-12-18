@@ -14,7 +14,12 @@ const pedidoRoutes = require('./src/routes/pedidoRoutes');
 const app = express();
 
 // ===== CONEXIÓN A MONGODB =====
-mongoose.connect(process.env.MONGODB_URI)
+mongoose.connect(process.env.MONGODB_URI, {
+  connectTimeoutMS: 60000,
+  socketTimeoutMS: 60000,
+  serverSelectionTimeoutMS: 60000,
+  retryWrites: true
+})
   .then(() => {
     console.log('✅ Conectado a MongoDB Atlas');
   })
@@ -38,7 +43,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: 'http://localhost:3001',
+        url: 'http://localhost:3002',
         description: 'Servidor local'
       }
     ],
@@ -74,7 +79,7 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Ruta no encontrada' });
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor ejecutándose en http://localhost:${PORT}`);
   console.log(`📚 Documentación Swagger: http://localhost:${PORT}/api-docs`);
