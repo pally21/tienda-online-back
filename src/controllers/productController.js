@@ -102,7 +102,32 @@ exports.deleteProducto = async (req, res) => {
       return res.status(400).json({ message: 'ID de producto inválido' });
     }
 
-    const producto = await Producto.findByIdAndDelete(id, { timeout: 180000 });
+    let intento = 0;
+    let producto = null;
+    const maxIntentos = 3;
+
+    // Reintentar hasta 3 veces si falla
+    while (intento < maxIntentos && !producto) {
+      try {
+        intento++;
+        console.log(`🔄 Intento ${intento} de eliminar producto ${id}`);
+        
+        producto = await Producto.findByIdAndDelete(id).maxTimeMS(300000);
+        
+        if (producto) {
+          console.log(`✅ Producto eliminado en intento ${intento}`);
+          break;
+        }
+      } catch (err) {
+        console.error(`❌ Error en intento ${intento}:`, err.message);
+        if (intento < maxIntentos) {
+          // Esperar 2 segundos antes de reintentar
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } else {
+          throw err;
+        }
+      }
+    }
 
     if (!producto) {
       return res.status(404).json({ message: 'Producto no encontrado' });
@@ -118,7 +143,7 @@ exports.deleteProducto = async (req, res) => {
     // Manejo específico de timeout
     if (error.message.includes('timed out') || error.message.includes('timeout')) {
       return res.status(504).json({ 
-        message: 'Tiempo de espera agotado. Intenta nuevamente.',
+        message: 'Tiempo de espera agotado. MongoDB está lento. Intenta nuevamente.',
         error: error.message
       });
     }

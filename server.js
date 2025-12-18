@@ -15,13 +15,16 @@ const app = express();
 
 // ===== CONEXIÓN A MONGODB =====
 mongoose.connect(process.env.MONGODB_URI, {
-  connectTimeoutMS: 180000,
-  socketTimeoutMS: 180000,
-  serverSelectionTimeoutMS: 180000,
+  connectTimeoutMS: 300000,      // 5 minutos
+  socketTimeoutMS: 300000,        // 5 minutos
+  serverSelectionTimeoutMS: 300000, // 5 minutos
   family: 4,
   retryWrites: true,
-  maxPoolSize: 20,
-  minPoolSize: 5
+  retryReads: true,
+  maxPoolSize: 50,                // Aumentar pool de conexiones
+  minPoolSize: 10,
+  waitQueueTimeoutMS: 300000,
+  heartbeatFrequencyMS: 30000
 })
   .then(() => {
     console.log('✅ Conectado a MongoDB Atlas');
