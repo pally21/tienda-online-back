@@ -97,15 +97,35 @@ exports.deleteProducto = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const producto = await Producto.findByIdAndDelete(id);
+    // Validar que el ID sea válido
+    if (!id || id.length !== 24) {
+      return res.status(400).json({ message: 'ID de producto inválido' });
+    }
+
+    const producto = await Producto.findByIdAndDelete(id, { timeout: 180000 });
 
     if (!producto) {
       return res.status(404).json({ message: 'Producto no encontrado' });
     }
 
-    res.json({ message: 'Producto eliminado exitosamente' });
+    res.json({ 
+      message: 'Producto eliminado exitosamente',
+      producto: producto
+    });
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ message: 'Error al eliminar producto' });
+    console.error('Error al eliminar:', error);
+    
+    // Manejo específico de timeout
+    if (error.message.includes('timed out') || error.message.includes('timeout')) {
+      return res.status(504).json({ 
+        message: 'Tiempo de espera agotado. Intenta nuevamente.',
+        error: error.message
+      });
+    }
+    
+    res.status(500).json({ 
+      message: 'Error al eliminar producto',
+      error: error.message
+    });
   }
 };
