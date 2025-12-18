@@ -2,23 +2,13 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcryptjs = require('bcryptjs');
+const usuariosStore = require('./utils/usuariosStore');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 const JWT_SECRET = 'secreto_tienda_online_2025';
-
-// Datos de ejemplo en memoria (SOLO PARA DEMOSTRACIÓN)
-const usuarios = [
-  {
-    id: 1,
-    nombre: 'Admin Tienda',
-    email: 'admin@tienda.com',
-    password: '$2a$10$...',
-    role: 'ADMIN'
-  }
-];
 
 let pedidos = []; // Array de pedidos
 
@@ -115,22 +105,25 @@ app.post('/api/auth/register', (req, res) => {
     return res.status(400).json({ error: 'Faltan datos: nombre, email, password' });
   }
 
-  if (usuarios.some(u => u.email === email)) {
+  // Verificar que el email no exista
+  if (usuariosStore.obtenerPorEmail(email)) {
     console.log('❌ Email ya existe:', email);
     return res.status(400).json({ error: 'El email ya está registrado' });
   }
 
-  const nuevoUsuario = {
-    id: usuarios.length + 1,
+  const nuevoUsuario = usuariosStore.agregarUsuario({
     nombre,
     apellido: apellido || '',
     email,
     password: bcryptjs.hashSync(password, 10),
     direccion: direccion || '',
     role: 'USER'
-  };
+  });
 
-  usuarios.push(nuevoUsuario);
+  if (!nuevoUsuario) {
+    return res.status(400).json({ error: 'Error al registrar usuario' });
+  }
+
   console.log('✅ Usuario registrado:', nuevoUsuario.email);
 
   const token = jwt.sign(
@@ -165,12 +158,16 @@ app.post('/api/auth/login', (req, res) => {
   }
 
   // También permitir otros usuarios registrados
-  const usuario = usuarios.find(u => u.email === email);
+  const usuario = usuariosStore.obtenerPorEmail(email);
   if (!usuario) {
     return res.status(401).json({ error: 'Email no encontrado' });
   }
 
-  if (!bcryptjs.compareSync(password, usuario.password)) {
+  // Obtener el usuario con password para comparar
+  const usuariosConPassword = usuariosStore.leerUsuarios();
+  const usuarioConPassword = usuariosConPassword.find(u => u.email === email);
+
+  if (!bcryptjs.compareSync(password, usuarioConPassword.password)) {
     return res.status(401).json({ error: 'Contraseña incorrecta' });
   }
 
@@ -188,12 +185,18 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 app.get('/api/auth/me', authenticateToken, (req, res) => {
-  const usuario = usuarios.find(u => u.id === req.usuario.id);
+  const usuario = usuariosStore.obtenerPorId(req.usuario.id);
+  if (!usuario) {
+    return res.status(404).json({ error: 'Usuario no encontrado' });
+  }
   res.json({
-    id: usuario.id,
-    nombre: usuario.nombre,
-    email: usuario.email,
-    role: usuario.role
+    success: true,
+    data: {
+      id: usuario.id,
+      nombre: usuario.nombre,
+      email: usuario.email,
+      role: usuario.role
+    }
   });
 });
 
@@ -394,6 +397,103 @@ app.put('/api/pedidos/:id/estado', authenticateToken, authorize(['ADMIN']), (req
   res.json({ success: true, data: pedido });
 });
 
+// ===== RUTAS DE ADMINISTRACIÓN DE USUARIOS =====
+
+// Obtener todos los usuarios (solo admin)
+app.get('/api/admin/usuarios', authenticateToken, authorize(['ADMIN']), (req, res) => {
+  const usuarios = usuariosStore.obtenerTodos();
+  res.json({
+    success: true,
+    message: `Total de usuarios: ${usuarios.length}`,
+    data: usuarios
+  });
+});
+
+// Obtener un usuario específico (solo admin)
+app.get('/api/admin/usuarios/:id', authenticateToken, authorize(['ADMIN']), (req, res) => {
+  const usuario = usuariosStore.obtenerPorId(parseInt(req.params.id));
+  
+  if (!usuario) {
+    return res.status(404).json({ error: 'Usuario no encontrado' });
+  }
+
+  // Quitar password de la respuesta
+  const { password, ...usuarioSinPassword } = usuario;
+  res.json({ success: true, data: usuarioSinPassword });
+});
+
+// Actualizar estado de usuario (solo admin)
+app.put('/api/admin/usuarios/:id/estado', authenticateToken, authorize(['ADMIN']), (req, res) => {
+  const { estado } = req.body;
+  const idUsuario = parseInt(req.params.id);
+
+  if (!['activo', 'suspendido', 'inactivo'].includes(estado)) {
+    return res.status(400).json({ error: 'Estado inválido. Debe ser: activo, suspendido o inactivo' });
+  }
+
+  // No permitir cambiar estado del admin principal
+  if (idUsuario === 1) {
+    return res.status(403).json({ error: 'No se puede modificar el estado del usuario admin principal' });
+  }
+
+  const usuarioActualizado = usuariosStore.actualizarUsuario(idUsuario, { estado });
+
+  if (!usuarioActualizado) {
+    return res.status(404).json({ error: 'Usuario no encontrado' });
+  }
+
+  const { password, ...usuarioSinPassword } = usuarioActualizado;
+  res.json({
+    success: true,
+    message: `Usuario ${usuarioActualizado.email} actualizado a estado: ${estado}`,
+    data: usuarioSinPassword
+  });
+});
+
+// Eliminar usuario (solo admin)
+app.delete('/api/admin/usuarios/:id', authenticateToken, authorize(['ADMIN']), (req, res) => {
+  const idUsuario = parseInt(req.params.id);
+
+  // No permitir eliminar al admin principal
+  if (idUsuario === 1) {
+    return res.status(403).json({ error: 'No se puede eliminar el usuario admin principal' });
+  }
+
+  const usuario = usuariosStore.obtenerPorId(idUsuario);
+  if (!usuario) {
+    return res.status(404).json({ error: 'Usuario no encontrado' });
+  }
+
+  const emailUsuario = usuario.email;
+  const eliminado = usuariosStore.eliminarUsuario(idUsuario);
+
+  if (!eliminado) {
+    return res.status(400).json({ error: 'Error al eliminar usuario' });
+  }
+
+  res.json({
+    success: true,
+    message: `Usuario ${emailUsuario} eliminado correctamente`
+  });
+});
+
+// Obtener estadísticas de usuarios (solo admin)
+app.get('/api/admin/estadisticas/usuarios', authenticateToken, authorize(['ADMIN']), (req, res) => {
+  const usuarios = usuariosStore.obtenerTodos();
+  
+  const estadisticas = {
+    totalUsuarios: usuarios.length,
+    usuariosActivos: usuarios.filter(u => u.estado === 'activo').length,
+    usuariosSuspendidos: usuarios.filter(u => u.estado === 'suspendido').length,
+    usuariosInactivos: usuarios.filter(u => u.estado === 'inactivo').length,
+    admins: usuarios.filter(u => u.role === 'ADMIN').length,
+    usuariosRegulares: usuarios.filter(u => u.role === 'USER').length,
+    usuariosConCompras: usuarios.filter(u => u.ultimaCompra !== null).length
+  };
+
+  res.json({ success: true, data: estadisticas });
+});
+
 // Swagger Info
 app.get('/api-docs', (req, res) => {
   res.json({
@@ -411,7 +511,12 @@ app.get('/api-docs', (req, res) => {
       'GET /api/pedidos (requiere token - mis pedidos)',
       'GET /api/pedidos/admin/todas (requiere token ADMIN)',
       'GET /api/pedidos/:id (requiere token)',
-      'PUT /api/pedidos/:id/estado (requiere token ADMIN)'
+      'PUT /api/pedidos/:id/estado (requiere token ADMIN)',
+      'GET /api/admin/usuarios (ADMIN)',
+      'GET /api/admin/usuarios/:id (ADMIN)',
+      'PUT /api/admin/usuarios/:id/estado (ADMIN)',
+      'DELETE /api/admin/usuarios/:id (ADMIN)',
+      'GET /api/admin/estadisticas/usuarios (ADMIN)'
     ],
     demo_credentials: {
       email: 'admin@tienda.com',

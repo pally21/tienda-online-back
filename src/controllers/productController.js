@@ -1,13 +1,9 @@
-const pool = require('../config/database');
+const Producto = require('../../models/Producto');
 
 // OBTENER TODOS LOS PRODUCTOS
 exports.getProductos = async (req, res) => {
   try {
-    const connection = await pool.getConnection();
-    const [productos] = await connection.query(
-      'SELECT * FROM productos ORDER BY id'
-    );
-    connection.release();
+    const productos = await Producto.find({ activo: true });
     res.json(productos);
   } catch (error) {
     console.error('Error:', error);
@@ -19,18 +15,13 @@ exports.getProductos = async (req, res) => {
 exports.getProductoById = async (req, res) => {
   try {
     const { id } = req.params;
-    const connection = await pool.getConnection();
-    const [productos] = await connection.query(
-      'SELECT * FROM productos WHERE id = ?',
-      [id]
-    );
-    connection.release();
+    const producto = await Producto.findById(id);
 
-    if (productos.length === 0) {
+    if (!producto) {
       return res.status(404).json({ message: 'Producto no encontrado' });
     }
 
-    res.json(productos[0]);
+    res.json(producto);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ message: 'Error al obtener producto' });
@@ -42,26 +33,21 @@ exports.createProducto = async (req, res) => {
   try {
     const { nombre, precio, descripcion, imagen, stock, categoria } = req.body;
 
-    if (!nombre || !precio || !stock) {
+    if (!nombre || !precio || stock === undefined) {
       return res.status(400).json({ message: 'Campos requeridos: nombre, precio, stock' });
     }
 
-    const connection = await pool.getConnection();
-    const [result] = await connection.query(
-      'INSERT INTO productos (nombre, precio, descripcion, imagen, stock, categoria, fecha_creacion) VALUES (?, ?, ?, ?, ?, ?, NOW())',
-      [nombre, precio, descripcion, imagen, stock, categoria]
-    );
-    connection.release();
-
-    const nuevoProducto = {
-      id: result.insertId,
+    const nuevoProducto = new Producto({
       nombre,
       precio,
       descripcion,
       imagen,
       stock,
-      categoria
-    };
+      categoria,
+      activo: true
+    });
+
+    await nuevoProducto.save();
 
     res.status(201).json({
       message: 'Producto creado exitosamente',
@@ -79,37 +65,26 @@ exports.updateProducto = async (req, res) => {
     const { id } = req.params;
     const { nombre, precio, descripcion, imagen, stock, categoria } = req.body;
 
-    const connection = await pool.getConnection();
-
-    // Verificar que el producto existe
-    const [existingProducto] = await connection.query(
-      'SELECT * FROM productos WHERE id = ?',
-      [id]
+    const productoActualizado = await Producto.findByIdAndUpdate(
+      id,
+      {
+        ...(nombre && { nombre }),
+        ...(precio && { precio }),
+        ...(descripcion && { descripcion }),
+        ...(imagen && { imagen }),
+        ...(stock !== undefined && { stock }),
+        ...(categoria && { categoria })
+      },
+      { new: true, runValidators: true }
     );
 
-    if (existingProducto.length === 0) {
-      connection.release();
+    if (!productoActualizado) {
       return res.status(404).json({ message: 'Producto no encontrado' });
     }
 
-    await connection.query(
-      'UPDATE productos SET nombre = ?, precio = ?, descripcion = ?, imagen = ?, stock = ?, categoria = ? WHERE id = ?',
-      [nombre || existingProducto[0].nombre, precio || existingProducto[0].precio, descripcion || existingProducto[0].descripcion, imagen || existingProducto[0].imagen, stock || existingProducto[0].stock, categoria || existingProducto[0].categoria, id]
-    );
-
-    connection.release();
-
     res.json({
       message: 'Producto actualizado exitosamente',
-      producto: {
-        id,
-        nombre: nombre || existingProducto[0].nombre,
-        precio: precio || existingProducto[0].precio,
-        descripcion: descripcion || existingProducto[0].descripcion,
-        imagen: imagen || existingProducto[0].imagen,
-        stock: stock || existingProducto[0].stock,
-        categoria: categoria || existingProducto[0].categoria
-      }
+      producto: productoActualizado
     });
   } catch (error) {
     console.error('Error:', error);
@@ -121,20 +96,12 @@ exports.updateProducto = async (req, res) => {
 exports.deleteProducto = async (req, res) => {
   try {
     const { id } = req.params;
-    const connection = await pool.getConnection();
 
-    const [existingProducto] = await connection.query(
-      'SELECT * FROM productos WHERE id = ?',
-      [id]
-    );
+    const producto = await Producto.findByIdAndDelete(id);
 
-    if (existingProducto.length === 0) {
-      connection.release();
+    if (!producto) {
       return res.status(404).json({ message: 'Producto no encontrado' });
     }
-
-    await connection.query('DELETE FROM productos WHERE id = ?', [id]);
-    connection.release();
 
     res.json({ message: 'Producto eliminado exitosamente' });
   } catch (error) {

@@ -1,28 +1,7 @@
 
-🚀 SERVIDOR DE DEMOSTRACIÓN ejecutándose en http://localhost:3001
-📝 Swagger: http://localhost:3001/api-docs
+> tienda-online-backend@1.0.0 start
+> node server.js
 
-⚠️  NOTA: Este es un servidor de DEMOSTRACIÓN sin conexión a MySQL.
-
-Credenciales de prueba:
-  Email: admin@tienda.com
-  Contraseña: admin123
-
-📦 POST /api/pedidos { usuario: 'admin@tienda.com' }
-✅ Pedido creado: 1
-📦 GET /api/pedidos { usuario: 'paulinagajardo.g@gmail.com' }
-📦 POST /api/pedidos { usuario: 'paulinagajardo.g@gmail.com' }
-✅ Pedido creado: 2
-📦 GET /api/pedidos { usuario: 'admin@tienda.com' }
-📦 GET /api/pedidos/admin/todas
-📦 GET /api/pedidos/admin/todas
-✅ Pedido 2 actualizado a: Procesando
-DELETE /api/productos/:id { id: '6', usuario: 'admin@tienda.com', role: 'ADMIN' }
-Índice encontrado: 5
-Total de productos antes: 6
-Producto eliminado: Cinturón Premium
-Total de productos después: 5
-📦 GET /api/pedidos { usuario: 'admin@tienda.com' }
-📦 GET /api/pedidos { usuario: 'paulinagajardo.g@gmail.com' }
-📦 GET /api/pedidos { usuario: 'admin@tienda.com' }
-📦 GET /api/pedidos { usuario: 'admin@tienda.com' }
+🚀 Servidor ejecutándose en http://localhost:3002
+📚 Documentación Swagger: http://localhost:3002/api-docs
+✅ Conectado a MongoDB Atlas

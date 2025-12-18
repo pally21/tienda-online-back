@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 require('dotenv').config();
@@ -7,8 +8,20 @@ require('dotenv').config();
 // Rutas
 const authRoutes = require('./src/routes/authRoutes');
 const productRoutes = require('./src/routes/productRoutes');
+const adminRoutes = require('./src/routes/adminRoutes');
+const pedidoRoutes = require('./src/routes/pedidoRoutes');
 
 const app = express();
+
+// ===== CONEXIÓN A MONGODB =====
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('✅ Conectado a MongoDB Atlas');
+  })
+  .catch(err => {
+    console.error('❌ Error conectando a MongoDB:', err.message);
+    process.exit(1);
+  });
 
 // Middleware
 app.use(cors());
@@ -48,6 +61,8 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Rutas API
 app.use('/api/auth', authRoutes);
 app.use('/api/productos', productRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/pedidos', pedidoRoutes);
 
 // Ruta de prueba
 app.get('/api', (req, res) => {

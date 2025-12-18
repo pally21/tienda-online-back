@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "nombre": "Admin Tienda",
+    "email": "admin@tienda.com",
+    "password": "$2a$10$YuxHGJVzXXvB6p8VZw0keu5HmUc0g3X6Y5z9X9X9X9X9X9X9X9",
+    "role": "ADMIN",
+    "estado": "activo",
+    "fechaRegistro": "2025-01-01T00:00:00Z",
+    "ultimaCompra": null
+  },
+  {
+    "id": 2,
+    "nombre": "Juan Pérez",
+    "email": "juan@example.com",
+    "password": "$2a$10$YuxHGJVzXXvB6p8VZw0keu5HmUc0g3X6Y5z9X9X9X9X9X9X9X9",
+    "role": "USER",
+    "estado": "activo",
+    "fechaRegistro": "2025-12-10T14:30:00Z",
+    "ultimaCompra": "2025-12-15T10:20:00Z"
+  },
+  {
+    "id": 3,
+    "nombre": "María García",
+    "email": "maria@example.com",
+    "password": "$2a$10$YuxHGJVzXXvB6p8VZw0keu5HmUc0g3X6Y5z9X9X9X9X9X9X9X9",
+    "role": "USER",
+    "estado": "activo",
+    "fechaRegistro": "2025-12-05T09:15:00Z",
+    "ultimaCompra": "2025-12-16T16:45:00Z"
+  },
+  {
+    "id": 4,
+    "nombre": "Carlos López",
+    "email": "carlos@example.com",
+    "password": "$2a$10$YuxHGJVzXXvB6p8VZw0keu5HmUc0g3X6Y5z9X9X9X9X9X9X9X9",
+    "role": "USER",
+    "estado": "suspendido",
+    "fechaRegistro": "2025-11-20T11:00:00Z",
+    "ultimaCompra": null
+  }
+]
